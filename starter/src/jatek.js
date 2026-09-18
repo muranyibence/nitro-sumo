@@ -12,7 +12,7 @@
 
 import { pads } from './gamepad.js';
 import { padGate } from './pad-gate.js';
-import { nyitoLepes, nyitoKeszAll, nyitoValasztottak, nyitoRajzol } from './kezdokepernyo.js';
+import { nyitoLepes, nyitoKeszAll, nyitoValasztottak, nyitoSzurkolok, nyitoRajzol } from './kezdokepernyo.js';
 
 // ---------------------------------------------------------------- billentyuk
 //
@@ -110,6 +110,10 @@ const BOOST_SUGAR = 16;
 
 const VISSZASZAMLALAS_HOSSZ = 3;
 const RESTART_ABLAK = 0.5;
+const SZURKOLO_MERET = 40; // a palya korul szort kollegafejek
+const SZURKOLO_UGRAS_HOSSZ = 0.35; // egy ugras ennyi ideig tart
+const SZURKOLO_UGRAS_KOZ_MIN = 1.5; // ket ugras kozott legalabb ennyi telik el
+const SZURKOLO_UGRAS_KOZ_MAX = 4.5; // ...es legfeljebb ennyi
 
 const ESEMENYEK = {
   turbo: { nev: 'TURBÓ', tartam: 6 },
@@ -179,6 +183,7 @@ let allapot = 'KARAKTERVALASZTAS'; // KARAKTERVALASZTAS | VISSZASZAMLALAS | JATE
 let jelenlegiIdo = 0; // folyamatosan no, mp-ben: pulzalasokhoz es a restart-ablakhoz
 
 let jatekosok = [];
+let szurkolok = []; // { becenev, fejKep, x, y, amplitudo, kovetkezoUgrasHatra, ugrasHatra }[]
 let visszaszamlalasHatra = 0;
 let hatra = KOR_HOSSZ;
 let vege = false;
@@ -264,6 +269,67 @@ function pulzalasSzin(szin1, szin2, frekvencia) {
 }
 
 // -------------------------------------------------------------- kor inditas
+
+/**
+ * A ki nem valasztott kollegakat veletlenszeruen szorja szet a teljes
+ * palyan, az arena korul mindenhol (nem csak ket oldalsavban): kizart a
+ * korkoros arena-terulet (kis raadassal) es egy also/felso szegely, hogy a
+ * HUD-szoveget se fedjek el.
+ *
+ * KET KULON FELTETEL: a palya-mentesseg KOTELEZO, minden probalkozasnal
+ * ellenorizve - ebbol sose enged. A masik fejektol valo tavolsag csak
+ * preferencia: a legjobb (legtavolabbi) probalkozast tartja meg, de ha
+ * szuk a hely, inkabb egymashoz kozelebb kerulnek, mint hogy a palyara
+ * logjanak be.
+ */
+function epitSzurkolok(emberek) {
+  // A 35px-es korabbi raadas csak a fej meretet nem fedte: a fel-le ugras
+  // (max. ~16px) es a fejkep felatlője (~28px) egyutt mar belógott volna a
+  // palyara az ugras csucspontjaban. Ezert bovebb a raadas.
+  const KIZART_SUGAR = R0 + SZURKOLO_MERET + 25;
+  const FELSO_HATAR = 56 + SZURKOLO_MERET / 2;
+  const ALSO_HATAR = MAGASSAG - SZURKOLO_MERET / 2 - 6;
+  const BAL_HATAR = SZURKOLO_MERET / 2 + 6;
+  const JOBB_HATAR = SZELESSEG - SZURKOLO_MERET / 2 - 6;
+  const MIN_TAVOLSAG = SZURKOLO_MERET * 1.15;
+  const PROBAK_SZAMA = 80;
+
+  const eredmeny = [];
+  for (const e of emberek) {
+    let x = 0, y = 0, legjobbTavolsag = -Infinity, talalt = false;
+    for (let probak = 0; probak < PROBAK_SZAMA; probak++) {
+      const jx = BAL_HATAR + Math.random() * (JOBB_HATAR - BAL_HATAR);
+      const jy = FELSO_HATAR + Math.random() * (ALSO_HATAR - FELSO_HATAR);
+      if (Math.hypot(jx - KOZEP_X, jy - KOZEP_Y) <= KIZART_SUGAR) continue; // ez sosem alku targya
+
+      const legkozelebbiMasik = eredmeny.reduce(
+        (min, m) => Math.min(min, Math.hypot(jx - m.x, jy - m.y)), Infinity,
+      );
+      talalt = true;
+      if (legkozelebbiMasik > legjobbTavolsag) { legjobbTavolsag = legkozelebbiMasik; x = jx; y = jy; }
+      if (legkozelebbiMasik >= MIN_TAVOLSAG) break; // ez mar eleg jo, nem kell tovabb keresni
+    }
+    if (!talalt) {
+      // Rendkivul szuk hely eseten (a gyakorlatban nem szokott elofordulni)
+      // egy vaszon-sarokba tesszuk: a sarkok mindig tavolabb vannak a
+      // kozepponttol, mint a KIZART_SUGAR, tehat garantaltan palya-mentesek.
+      const sarkok = [
+        { x: BAL_HATAR, y: FELSO_HATAR }, { x: JOBB_HATAR, y: FELSO_HATAR },
+        { x: BAL_HATAR, y: ALSO_HATAR }, { x: JOBB_HATAR, y: ALSO_HATAR },
+      ];
+      ({ x, y } = sarkok[Math.floor(Math.random() * sarkok.length)]);
+    }
+    eredmeny.push({
+      becenev: e.becenev,
+      fejKep: e.fejKep,
+      x, y,
+      amplitudo: 8 + Math.random() * 8, // az ugras magassaga
+      kovetkezoUgrasHatra: Math.random() * SZURKOLO_UGRAS_KOZ_MAX, // ne mind egyszerre induljon
+      ugrasHatra: 0, // >0, amig a jelenlegi ugras tart
+    });
+  }
+  return eredmeny;
+}
 
 function jatekosokLetrehozasa(valasztottak) {
   jatekosok = ALAP.map((a, i) => {
@@ -613,12 +679,30 @@ function karakterValasztasLepes(dt) {
   nyitoLepes(dt, ALAP, frissenLenyomva);
   if (nyitoKeszAll()) {
     jatekosokLetrehozasa(nyitoValasztottak(ALAP));
+    szurkolok = epitSzurkolok(nyitoSzurkolok());
     visszaszamlalasIndit();
+  }
+}
+
+function szurkolokLepes(dt) {
+  for (const sz of szurkolok) {
+    if (sz.ugrasHatra > 0) {
+      sz.ugrasHatra -= dt;
+      if (sz.ugrasHatra <= 0) {
+        sz.ugrasHatra = 0;
+        sz.kovetkezoUgrasHatra = SZURKOLO_UGRAS_KOZ_MIN
+          + Math.random() * (SZURKOLO_UGRAS_KOZ_MAX - SZURKOLO_UGRAS_KOZ_MIN);
+      }
+      continue;
+    }
+    sz.kovetkezoUgrasHatra -= dt;
+    if (sz.kovetkezoUgrasHatra <= 0) sz.ugrasHatra = SZURKOLO_UGRAS_HOSSZ;
   }
 }
 
 function lepes(dt) {
   jelenlegiIdo += dt;
+  szurkolokLepes(dt);
   if (allapot === 'KARAKTERVALASZTAS') karakterValasztasLepes(dt);
   else if (allapot === 'VISSZASZAMLALAS') visszaszamlalasLepes(dt);
   else if (allapot === 'JATEK') jatekLepes(dt);
@@ -650,6 +734,25 @@ function rajzolArena(zonaSugar, eltelt) {
     ? pulzalasSzin('#ff4d4d', '#ffb3b3', 6)
     : pulzalasSzin('#6fd3ff', '#e8f7ff', 2);
   c.stroke();
+}
+
+function rajzolSzurkolok() {
+  for (const sz of szurkolok) {
+    // Nem folyamatosan hullamzik: allva var, es idonkent ugrik egyet.
+    let y = sz.y;
+    if (sz.ugrasHatra > 0) {
+      const t = 1 - sz.ugrasHatra / SZURKOLO_UGRAS_HOSSZ;
+      y -= Math.sin(t * Math.PI) * sz.amplitudo;
+    }
+    if (sz.fejKep) {
+      c.drawImage(sz.fejKep, sz.x - SZURKOLO_MERET / 2, y - SZURKOLO_MERET / 2, SZURKOLO_MERET, SZURKOLO_MERET);
+    } else {
+      c.beginPath();
+      c.arc(sz.x, y, SZURKOLO_MERET / 2, 0, Math.PI * 2);
+      c.fillStyle = '#2a2f3b';
+      c.fill();
+    }
+  }
 }
 
 function rajzolJatekos(j) {
@@ -808,6 +911,7 @@ function rajzolKorVege() {
 function rajzolJatek() {
   const eltelt = KOR_HOSSZ - hatra;
   rajzolArena(legutobbiZonaSugar, eltelt);
+  rajzolSzurkolok();
   rajzolBoostok();
   rajzolJatekos(jatekosok[0]);
   rajzolJatekos(jatekosok[1]);
@@ -822,6 +926,7 @@ function rajzolJatek() {
 
 function rajzolVisszaszamlalas() {
   rajzolArena(legutobbiZonaSugar, 0);
+  rajzolSzurkolok();
   rajzolJatekos(jatekosok[0]);
   rajzolJatekos(jatekosok[1]);
 

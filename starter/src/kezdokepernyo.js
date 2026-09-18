@@ -77,6 +77,14 @@ export function nyitoValasztottak(profilok) {
   });
 }
 
+/** A ket kivalasztotton kivul MINDENKI, aki a nevsorban van: { becenev, fejKep }[]. */
+export function nyitoSzurkolok() {
+  const valasztottIndexek = new Set(valasztas.index);
+  return kollegak
+    .filter((_, i) => !valasztottIndexek.has(i))
+    .map((k) => ({ becenev: k.becenev, fejKep: fejKepek.get(k.id) }));
+}
+
 export function nyitoRajzol(c, szelesseg, magassag, profilok) {
   c.fillStyle = '#12141c';
   c.fillRect(0, 0, szelesseg, magassag);
