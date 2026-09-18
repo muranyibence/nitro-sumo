@@ -663,6 +663,10 @@ function jatekLepes(dt) {
   jatekosLepes(jatekosok[0], jatekosok[1], dt);
   jatekosLepes(jatekosok[1], jatekosok[0], dt);
   utkozesFeldolgozas(jatekosok[0], jatekosok[1]);
+  for (const j of jatekosok) {
+    const sugar = JATEKOS_SUGAR * (j.nagyHitboxHatra > 0 ? 1.4 : 1);
+    effektek.dashNyom(j, sugar, sugar * FEJ_KEP_SZORZO);
+  }
   esesEllenorzes(eltelt);
 
   if (!vege && hatra <= 0) {
@@ -730,6 +734,7 @@ function rajzolArena(zonaSugar, eltelt) {
     const meret = zonaSugar * 2;
     c.drawImage(logoKep, KOZEP_X - meret / 2, KOZEP_Y - meret / 2, meret, meret);
   }
+  effektek.rajzolRepedesek(c);
   c.restore();
 
   c.beginPath();
@@ -946,6 +951,7 @@ function rajzolJatek() {
   rajzolArena(legutobbiZonaSugar, eltelt);
   rajzolSzurkolok();
   rajzolBoostok();
+  effektek.rajzolNyomok(c);
   rajzolJatekos(jatekosok[0]);
   rajzolJatekos(jatekosok[1]);
   effektek.rajzol(c);

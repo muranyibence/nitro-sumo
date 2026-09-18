@@ -2,6 +2,8 @@
 export function utkozesEffektek() {
   let szikrak = [], hullamok = [], razas = 0, ido = 0, utolso = -1;
   let hang = null, nemitva = false;
+  let nyomok = [], repedesek = [], repedesVarakozas = 0;
+  const nyomIdok = new Map();
   const kevesMozgas = window.matchMedia('(prefers-reduced-motion: reduce)');
   const gomb = document.createElement('button');
   gomb.type = 'button';
@@ -60,10 +62,39 @@ export function utkozesEffektek() {
       szikrak = szikrak.slice(-160);
       hullamok.push({ x, y, elet: 0.22, ero });
       hullamok = hullamok.slice(-4);
+      if (repedesVarakozas <= 0 && Math.random() < 0.35 + ero * 0.25) {
+        const agak = [];
+        const darab = 4 + Math.round(ero * 3);
+        const kezdoSzog = Math.random() * Math.PI * 2;
+        for (let i = 0; i < darab; i++) {
+          const szog = kezdoSzog + i * Math.PI * 2 / darab;
+          const pontok = [{ x, y }];
+          let px = x, py = y;
+          for (let k = 0; k < 4; k++) {
+            const irany = szog + (Math.random() - 0.5) * 0.8;
+            const hossz = (10 + Math.random() * 10) * (1 + ero * 0.6);
+            px += Math.cos(irany) * hossz; py += Math.sin(irany) * hossz;
+            pontok.push({ x: px, y: py });
+            if (k === 1 || k === 2) {
+              const oldal = irany + (i % 2 ? 1 : -1) * 0.8;
+              agak.push([{ x: px, y: py }, { x: px + Math.cos(oldal) * hossz, y: py + Math.sin(oldal) * hossz }]);
+            }
+          }
+          agak.push(pontok);
+        }
+        repedesek.push({ agak, elet: 0.9 });
+        repedesek = repedesek.slice(-3);
+        repedesVarakozas = 0.65;
+      }
       puff(ero);
     },
     lepes(dt) {
       ido += dt;
+      repedesVarakozas = Math.max(0, repedesVarakozas - dt);
+      for (const n of nyomok) n.elet -= dt;
+      for (const r of repedesek) r.elet -= dt;
+      nyomok = nyomok.filter(n => n.elet > 0);
+      repedesek = repedesek.filter(r => r.elet > 0);
       razas = Math.max(0, razas - 45 * dt);
       for (const p of szikrak) {
         p.elet -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
@@ -72,6 +103,41 @@ export function utkozesEffektek() {
       for (const h of hullamok) h.elet -= dt;
       szikrak = szikrak.filter(p => p.elet > 0);
       hullamok = hullamok.filter(h => h.elet > 0);
+    },
+    dashNyom(j, sugar, fejMeret) {
+      if (!j.dashAktiv) { nyomIdok.delete(j.slot); return; }
+      if (ido - (nyomIdok.get(j.slot) ?? -1) < 0.045) return;
+      nyomIdok.set(j.slot, ido);
+      nyomok.push({ x: j.x, y: j.y, sugar, fejMeret, fejKep: j.fejKep, szin: j.szin, elet: 0.18 });
+      nyomok = nyomok.slice(-8);
+    },
+    rajzolNyomok(c) {
+      c.save();
+      for (const n of nyomok) {
+        c.globalAlpha = 0.4 * (n.elet / 0.18);
+        c.fillStyle = n.szin;
+        c.beginPath(); c.arc(n.x, n.y, n.sugar, 0, Math.PI * 2); c.fill();
+        if (n.fejKep) c.drawImage(n.fejKep, n.x - n.fejMeret / 2, n.y - n.fejMeret / 2, n.fejMeret, n.fejMeret);
+      }
+      c.restore();
+    },
+    // Az aréna meglévő kör alakú clipjén belül, a játékosok alatt rajzoljuk.
+    rajzolRepedesek(c) {
+      c.save();
+      c.lineJoin = 'round'; c.lineCap = 'round';
+      for (const r of repedesek) {
+        c.globalAlpha = Math.min(1, r.elet / 0.5);
+        for (const [szin, vastagsag] of [['#070b13', 5], ['#ffb96b', 1.2]]) {
+          c.strokeStyle = szin; c.lineWidth = vastagsag;
+          c.beginPath();
+          for (const ag of r.agak) {
+            c.moveTo(ag[0].x, ag[0].y);
+            for (const p of ag.slice(1)) c.lineTo(p.x, p.y);
+          }
+          c.stroke();
+        }
+      }
+      c.restore();
     },
     kamera(c) {
       if (!kevesMozgas.matches && razas > 0) {
@@ -95,6 +161,9 @@ export function utkozesEffektek() {
       }
       c.restore();
     },
-    torol() { szikrak = []; hullamok = []; razas = 0; utolso = -1; },
+    torol() {
+      szikrak = []; hullamok = []; nyomok = []; repedesek = [];
+      nyomIdok.clear(); repedesVarakozas = 0; razas = 0; utolso = -1;
+    },
   };
 }

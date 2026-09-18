@@ -158,6 +158,8 @@ korong színe/aurája jelzi, nem külön ikon:
 - Rövid, szintetizált puffanás, nagyobb lökésnél mélyebb és erősebb hang. A hang billentyűleütéssel vagy a „Hang bekapcsolása” gombbal engedélyezhető, ugyanott némítható; kontrollerhez egérkattintás szükséges lehet.
 - Az effektek között minimum 0,1 mp telik el. A szikrák 0,2–0,45 mp, a fénygyűrű 0,22 mp alatt eltűnik; új körben minden vizuális effekt törlődik.
 - Az effektek nem módosítják az ütközés erejét, az irányítást vagy a kör idejét.
+- Dash közben 0,045 mp-enként halvány fej- és korongmásolat marad a játékos mögött; 0,18 mp alatt eltűnik, két játékosnál összesen legfeljebb 8 másolat látszik. A másolatok az eredeti pozíciójukon maradnak, a játékosok alatt rajzolódnak.
+- Ütközéskor 35–60% eséllyel (lökéserő szerint) elágazó, meleg fényű repedések jelennek meg a talajon. 0,9 mp után eltűnnek, két repedés keletkezése között legalább 0,65 mp telik el. Az aktuális arénahatáron kívül nem látszanak; csak vizuálisak. Új körben a repedések és a dash-másolatok is törlődnek.
 
 ## MVP a 2 órás határidőhöz
 
