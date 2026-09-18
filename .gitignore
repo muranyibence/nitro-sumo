@@ -8,3 +8,8 @@ Thumbs.db
 
 # Naplók
 *.log
+
+# Kollegafejek: valodi arcfotok a csapatbol, nem publikus repoba valok.
+# A logo (starter/img/logo/) nem erintett, csak a kozvetlenul az img/ alatti fejek.
+starter/img/*.png
+starter/img/kollegak.json
