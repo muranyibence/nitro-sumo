@@ -736,14 +736,38 @@ function rajzolArena(zonaSugar, eltelt) {
   c.stroke();
 }
 
+// Kez pozicioja allva (csipomagassagban, a fejtol kifele-lefele) es ugraskor
+// (a fej fole nyulva, mintha unnepelne). A ketto kozott az ugras haladasa
+// szerint interpolal, tehat a kez a fejjel egyutt mozog fel-le.
+const SZURKOLO_KEZ_ALLVA = { dx: 0.38, dy: 0.3 };
+const SZURKOLO_KEZ_FENT = { dx: 0.42, dy: -0.55 };
+const SZURKOLO_KEZ_SUGAR = 5;
+const SZURKOLO_KEZ_SZIN = '#e0a978';
+
+function rajzolSzurkoloKezek(sz, x, y, lendulet) {
+  const dx = (SZURKOLO_KEZ_ALLVA.dx + (SZURKOLO_KEZ_FENT.dx - SZURKOLO_KEZ_ALLVA.dx) * lendulet) * SZURKOLO_MERET;
+  const dy = (SZURKOLO_KEZ_ALLVA.dy + (SZURKOLO_KEZ_FENT.dy - SZURKOLO_KEZ_ALLVA.dy) * lendulet) * SZURKOLO_MERET;
+  c.fillStyle = SZURKOLO_KEZ_SZIN;
+  for (const irany of [-1, 1]) {
+    c.beginPath();
+    c.arc(x + irany * dx, y + dy, SZURKOLO_KEZ_SUGAR, 0, Math.PI * 2);
+    c.fill();
+  }
+}
+
 function rajzolSzurkolok() {
   for (const sz of szurkolok) {
     // Nem folyamatosan hullamzik: allva var, es idonkent ugrik egyet.
     let y = sz.y;
+    let lendulet = 0; // 0 = kez lent, 1 = kez fent (ugras csucspontja)
     if (sz.ugrasHatra > 0) {
       const t = 1 - sz.ugrasHatra / SZURKOLO_UGRAS_HOSSZ;
-      y -= Math.sin(t * Math.PI) * sz.amplitudo;
+      lendulet = Math.sin(t * Math.PI);
+      y -= lendulet * sz.amplitudo;
     }
+
+    rajzolSzurkoloKezek(sz, sz.x, y, lendulet);
+
     if (sz.fejKep) {
       c.drawImage(sz.fejKep, sz.x - SZURKOLO_MERET / 2, y - SZURKOLO_MERET / 2, SZURKOLO_MERET, SZURKOLO_MERET);
     } else {
