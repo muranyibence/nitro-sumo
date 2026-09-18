@@ -12,6 +12,7 @@
 
 import { pads } from './gamepad.js';
 import { padGate } from './pad-gate.js';
+import { nyitoLepes, nyitoKeszAll, nyitoValasztottak, nyitoRajzol } from './kezdokepernyo.js';
 
 // ---------------------------------------------------------------- billentyuk
 //
@@ -109,7 +110,6 @@ const BOOST_SUGAR = 16;
 
 const VISSZASZAMLALAS_HOSSZ = 3;
 const RESTART_ABLAK = 0.5;
-const VALASZTO_FEJ_MERET = 180;
 
 const ESEMENYEK = {
   turbo: { nev: 'TURBÓ', tartam: 6 },
@@ -130,35 +130,6 @@ const BOOSTOK = {
   zsugoritas: { nev: 'ZSUGORÍTÁS', szin: '#ff8c8c', ikon: '🎯' },
 };
 const BOOST_TIPUSOK = Object.keys(BOOSTOK);
-
-// ------------------------------------------------------------ kollegafejek
-//
-// Opcionalis: ha a starter/img/kollegak.json nincs meg (nem kertek fejeket),
-// a karakterValasztasLepes automatikusan fallback-el sima szinu korongra.
-
-let kollegak = [];
-const fejKepek = new Map(); // id -> HTMLImageElement
-let kepekKeszek = false;
-
-async function betoltKepek() {
-  try {
-    const res = await fetch('img/kollegak.json');
-    const adat = await res.json();
-    kollegak = adat.kollegak ?? [];
-    if (kollegak.length > 1) karakterValasztas.index[1] = 1;
-    await Promise.all(kollegak.map((k) => new Promise((resolve) => {
-      const img = new Image();
-      img.onload = resolve;
-      img.onerror = resolve;
-      img.src = k.kep;
-      fejKepek.set(k.id, img);
-    })));
-  } catch {
-    kollegak = [];
-  } finally {
-    kepekKeszek = true;
-  }
-}
 
 // ------------------------------------------------------------- arena-logo
 //
@@ -206,8 +177,6 @@ function feherAthatszova(img) {
 
 let allapot = 'KARAKTERVALASZTAS'; // KARAKTERVALASZTAS | VISSZASZAMLALAS | JATEK
 let jelenlegiIdo = 0; // folyamatosan no, mp-ben: pulzalasokhoz es a restart-ablakhoz
-
-const karakterValasztas = { index: [0, 0], kesz: [false, false], inditasKesz: 0 };
 
 let jatekosok = [];
 let visszaszamlalasHatra = 0;
@@ -296,16 +265,16 @@ function pulzalasSzin(szin1, szin2, frekvencia) {
 
 // -------------------------------------------------------------- kor inditas
 
-function jatekosokLetrehozasa() {
+function jatekosokLetrehozasa(valasztottak) {
   jatekosok = ALAP.map((a, i) => {
-    const k = kollegak[karakterValasztas.index[i]];
+    const v = valasztottak[i];
     return {
       slot: i,
       szin: a.szin,
       keys: a.keys,
-      nev: k ? k.nev : a.alapnev,
-      becenev: k ? k.becenev : a.alapnev,
-      fejKep: k ? fejKepek.get(k.id) : null,
+      nev: v.nev,
+      becenev: v.becenev,
+      fejKep: v.fejKep,
       x: 0, y: 0,
       kbx: 0, kby: 0,
       iranyX: i === 0 ? 1 : -1, iranyY: 0,
@@ -641,32 +610,10 @@ function visszaszamlalasLepes(dt) {
 }
 
 function karakterValasztasLepes(dt) {
-  if (!kepekKeszek) return;
-
-  if (kollegak.length === 0) {
-    jatekosokLetrehozasa();
+  nyitoLepes(dt, ALAP, frissenLenyomva);
+  if (nyitoKeszAll()) {
+    jatekosokLetrehozasa(nyitoValasztottak(ALAP));
     visszaszamlalasIndit();
-    return;
-  }
-
-  ALAP.forEach((_, i) => {
-    if (karakterValasztas.kesz[i]) return;
-    const keys = ALAP[i].keys;
-    if (frissenLenyomva(keys.left)) {
-      karakterValasztas.index[i] = (karakterValasztas.index[i] - 1 + kollegak.length) % kollegak.length;
-    }
-    if (frissenLenyomva(keys.right)) {
-      karakterValasztas.index[i] = (karakterValasztas.index[i] + 1) % kollegak.length;
-    }
-    if (frissenLenyomva(keys.b)) karakterValasztas.kesz[i] = true;
-  });
-
-  if (karakterValasztas.kesz[0] && karakterValasztas.kesz[1]) {
-    karakterValasztas.inditasKesz += dt;
-    if (karakterValasztas.inditasKesz >= 0.6) {
-      jatekosokLetrehozasa();
-      visszaszamlalasIndit();
-    }
   }
 }
 
@@ -886,55 +833,8 @@ function rajzolVisszaszamlalas() {
   c.fillText(szam > 0 ? String(szam) : 'RAJT!', SZELESSEG / 2, MAGASSAG / 2 - 10);
 }
 
-function rajzolKarakterValasztas() {
-  c.fillStyle = '#12141c';
-  c.fillRect(0, 0, SZELESSEG, MAGASSAG);
-
-  if (!kepekKeszek) {
-    c.textAlign = 'center';
-    c.textBaseline = 'alphabetic';
-    c.fillStyle = '#8b93a7';
-    c.font = '600 22px ui-sans-serif, system-ui, sans-serif';
-    c.fillText('Fejek betöltése…', SZELESSEG / 2, MAGASSAG / 2);
-    return;
-  }
-
-  c.strokeStyle = '#2a2f3b';
-  c.lineWidth = 2;
-  c.beginPath();
-  c.moveTo(SZELESSEG / 2, 0);
-  c.lineTo(SZELESSEG / 2, MAGASSAG);
-  c.stroke();
-
-  ALAP.forEach((a, i) => {
-    const kozepX = i === 0 ? SZELESSEG * 0.25 : SZELESSEG * 0.75;
-    const kollega = kollegak[karakterValasztas.index[i]];
-    const kep = kollega ? fejKepek.get(kollega.id) : null;
-
-    if (kep) {
-      c.drawImage(
-        kep,
-        kozepX - VALASZTO_FEJ_MERET / 2,
-        MAGASSAG / 2 - VALASZTO_FEJ_MERET / 2 - 20,
-        VALASZTO_FEJ_MERET,
-        VALASZTO_FEJ_MERET,
-      );
-    }
-
-    c.textAlign = 'center';
-    c.textBaseline = 'alphabetic';
-    c.font = '700 26px ui-sans-serif, system-ui, sans-serif';
-    c.fillStyle = a.szin;
-    c.fillText(kollega ? kollega.nev : a.alapnev, kozepX, MAGASSAG / 2 + 90);
-
-    c.font = '400 15px ui-sans-serif, system-ui, sans-serif';
-    c.fillStyle = '#8b93a7';
-    c.fillText(karakterValasztas.kesz[i] ? 'KÉSZ ✓' : '◄ ► váltás   B: kész', kozepX, MAGASSAG / 2 + 120);
-  });
-}
-
 function rajzol() {
-  if (allapot === 'KARAKTERVALASZTAS') rajzolKarakterValasztas();
+  if (allapot === 'KARAKTERVALASZTAS') nyitoRajzol(c, SZELESSEG, MAGASSAG, ALAP);
   else if (allapot === 'VISSZASZAMLALAS') rajzolVisszaszamlalas();
   else if (allapot === 'JATEK') rajzolJatek();
 }
@@ -954,7 +854,6 @@ function kepkocka(most) {
 // ---------------------------------------------------------------- indulas
 
 pads.init({ slots: 2, keyboard: false });
-betoltKepek();
 requestAnimationFrame(kepkocka);
 
 window.jatek = {
