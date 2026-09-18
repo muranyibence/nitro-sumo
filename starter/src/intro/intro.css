@@ -1,0 +1,166 @@
+/* --- Nitro Sumo startup intro --- */
+.intro-root {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: #000;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+.intro-root.is-wait {
+  cursor: pointer;
+}
+.intro-root.is-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.intro-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(42vw, 420px);
+  height: min(42vw, 420px);
+  transform: translate(-118%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(26, 90, 150, 0.45) 0%, rgba(10, 30, 55, 0.12) 42%, transparent 70%);
+  filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+}
+.intro-root.is-wait .intro-glow,
+.intro-root.is-run .intro-glow {
+  opacity: 1;
+  animation: introGlowPulse 2.4s ease-in-out infinite;
+}
+.intro-root.is-run .intro-glow {
+  animation: introGlowPulse 2.4s ease-in-out infinite, introGlowHit 0.35s ease-out 6.58s both;
+}
+
+.intro-stage {
+  position: relative;
+  width: min(92vw, 1100px);
+  aspect-ratio: 1361 / 239;
+  z-index: 1;
+}
+
+.intro-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
+
+.intro-full {
+  opacity: 0;
+}
+.intro-root.is-wait .intro-full {
+  opacity: 1;
+}
+.intro-root.is-run:not(.is-wait) .intro-full {
+  animation: introIn 0.5s ease-out both, introSplit 0s linear 4.66s forwards;
+}
+.intro-root.is-run.is-wait .intro-full {
+  animation: introSplit 0s linear 4.66s forwards;
+}
+
+.intro-nitro,
+.intro-wise,
+.intro-sumo {
+  opacity: 0;
+}
+
+/* WISE: letters start at ~x 862 / 1361 */
+.intro-wise {
+  clip-path: inset(0 0 0 62%);
+  transform-origin: 78% 80%;
+}
+/* SUMO: letters start at ~x 892 / 1361 */
+.intro-sumo {
+  clip-path: inset(0 0 0 64.5%);
+}
+
+.intro-root.is-run .intro-nitro {
+  animation: introShow 0s linear 4.66s forwards;
+}
+.intro-root.is-run .intro-wise {
+  animation: introWiseDrop 0.95s cubic-bezier(0.55, 0.06, 0.95, 0.25) 4.66s forwards;
+}
+.intro-root.is-run .intro-sumo {
+  animation: introSumoIn 0.55s cubic-bezier(0.16, 0.84, 0.32, 1) 6.21s forwards;
+}
+
+.intro-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 70% 50%, rgba(180, 220, 255, 0.55) 0%, rgba(40, 90, 160, 0.12) 40%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.intro-root.is-run .intro-flash {
+  animation: introFlash 0.42s ease-out 6.55s both;
+}
+
+.intro-hint {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: #8a93a3;
+  letter-spacing: 0.34em;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  animation: introHintPulse 1.8s ease-in-out infinite;
+}
+.intro-root.is-run .intro-hint {
+  opacity: 0;
+  animation: none;
+}
+
+@keyframes introIn {
+  from { opacity: 0; filter: blur(10px); transform: scale(0.97); }
+  to { opacity: 1; filter: none; transform: none; }
+}
+@keyframes introSplit {
+  to { opacity: 0; }
+}
+@keyframes introShow {
+  to { opacity: 1; }
+}
+@keyframes introWiseDrop {
+  0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+  100% { opacity: 0.35; transform: translateY(72vh) rotate(14deg); }
+}
+@keyframes introSumoIn {
+  0% { opacity: 0; transform: translateY(-18px); filter: blur(4px); }
+  70% { opacity: 1; transform: translateY(2px); filter: none; }
+  100% { opacity: 1; transform: translateY(0); filter: none; }
+}
+@keyframes introFlash {
+  0% { opacity: 0; }
+  30% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes introGlowPulse {
+  0%, 100% { opacity: 0.75; transform: translate(-118%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-118%, -50%) scale(1.08); }
+}
+@keyframes introGlowHit {
+  0% { opacity: 1; }
+  40% { opacity: 1; transform: translate(-118%, -50%) scale(1.35); }
+  100% { opacity: 0.8; }
+}
+@keyframes introHintPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.95; }
+}

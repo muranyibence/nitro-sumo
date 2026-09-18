@@ -14,6 +14,8 @@ import { pads } from './gamepad.js';
 import { utkozesEffektek } from './utkozes-effektek.js';
 import { padGate } from './pad-gate.js';
 import { nyitoLepes, nyitoKeszAll, nyitoValasztottak, nyitoSzurkolok, nyitoRajzol } from './kezdokepernyo.js';
+import { playIntro } from './intro/intro.js';
+import { playBell, startArena, stopArena } from './intro/sound.js';
 
 // ---------------------------------------------------------------- billentyuk
 //
@@ -182,6 +184,7 @@ function feherAthatszova(img) {
 // ---------------------------------------------------------------- allapot
 
 let allapot = 'KARAKTERVALASZTAS'; // KARAKTERVALASZTAS | VISSZASZAMLALAS | JATEK
+let kapuNyitva = false;
 let jelenlegiIdo = 0; // folyamatosan no, mp-ben: pulzalasokhoz es a restart-ablakhoz
 
 let jatekosok = [];
@@ -390,6 +393,8 @@ function visszaszamlalasIndit() {
   allapot = 'VISSZASZAMLALAS';
   visszaszamlalasHatra = VISSZASZAMLALAS_HOSSZ;
   korIndit();
+  stopArena();
+  try { playBell(); } catch (_) { /* */ }
 }
 
 // ---------------------------------------------------------------- fizika
@@ -676,11 +681,18 @@ function jatekLepes(dt) {
     const dB = Math.hypot(jatekosok[1].x - KOZEP_X, jatekosok[1].y - KOZEP_Y);
     gyoztes = dA < dB ? jatekosok[0] : dB < dA ? jatekosok[1] : null;
   }
+
+  if (vege) {
+    try { stopArena(); } catch (_) { /* */ }
+  }
 }
 
 function visszaszamlalasLepes(dt) {
   visszaszamlalasHatra -= dt;
-  if (visszaszamlalasHatra <= 0) allapot = 'JATEK';
+  if (visszaszamlalasHatra <= 0) {
+    allapot = 'JATEK';
+    try { startArena(); } catch (_) { /* */ }
+  }
 }
 
 function karakterValasztasLepes(dt) {
@@ -710,11 +722,13 @@ function szurkolokLepes(dt) {
 
 function lepes(dt) {
   jelenlegiIdo += dt;
-  effektek.lepes(dt);
-  szurkolokLepes(dt);
-  if (allapot === 'KARAKTERVALASZTAS') karakterValasztasLepes(dt);
-  else if (allapot === 'VISSZASZAMLALAS') visszaszamlalasLepes(dt);
-  else if (allapot === 'JATEK') jatekLepes(dt);
+  if (kapuNyitva) {
+    effektek.lepes(dt);
+    szurkolokLepes(dt);
+    if (allapot === 'KARAKTERVALASZTAS') karakterValasztasLepes(dt);
+    else if (allapot === 'VISSZASZAMLALAS') visszaszamlalasLepes(dt);
+    else if (allapot === 'JATEK') jatekLepes(dt);
+  }
   nyomvaElozo = new Set(nyomva);
 }
 
@@ -1013,12 +1027,17 @@ window.jatek = {
   visszaszamlalasIndit,
 };
 
-padGate({
-  players: 2,
-  title: 'LÖKDÖSŐ ARÉNA',
-  subtitle: 'Dugd be a két USB kontrollert, és nyomj meg rajtuk egy gombot.',
-  onClose: () => {
-    pads.keyboard(true);
-    nyomva.clear();
-  },
-});
+function nyitKapu() {
+  padGate({
+    players: 2,
+    title: 'LÖKDÖSŐ ARÉNA',
+    subtitle: 'Dugd be a két USB kontrollert, és nyomj meg rajtuk egy gombot.',
+    onClose: () => {
+      pads.keyboard(true);
+      nyomva.clear();
+      kapuNyitva = true;
+    },
+  });
+}
+
+playIntro().then(nyitKapu, nyitKapu);

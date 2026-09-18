@@ -25,6 +25,7 @@ const MIME = {
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',
   '.ogg': 'audio/ogg',
+  '.m4a': 'audio/mp4',
 };
 
 const app = createServer(async (req, res) => {
