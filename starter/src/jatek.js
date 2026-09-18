@@ -11,6 +11,7 @@
  */
 
 import { pads } from './gamepad.js';
+import { utkozesEffektek } from './utkozes-effektek.js';
 import { padGate } from './pad-gate.js';
 import { nyitoLepes, nyitoKeszAll, nyitoValasztottak, nyitoSzurkolok, nyitoRajzol } from './kezdokepernyo.js';
 
@@ -57,6 +58,7 @@ function frissenLenyomva(kod) {
 
 const canvas = document.getElementById('jatek');
 const c = canvas.getContext('2d');
+const effektek = utkozesEffektek();
 const SZELESSEG = canvas.width;
 const MAGASSAG = canvas.height;
 const KOZEP_X = SZELESSEG / 2;
@@ -354,6 +356,7 @@ function jatekosokLetrehozasa(valasztottak) {
 }
 
 function korIndit() {
+  effektek.torol();
   jatekosok[0].x = KOZEP_X - 100; jatekosok[0].y = KOZEP_Y;
   jatekosok[1].x = KOZEP_X + 100; jatekosok[1].y = KOZEP_Y;
   for (const j of jatekosok) {
@@ -530,6 +533,7 @@ function utkozesFeldolgozas(A, B) {
   A.kby -= ny * erosseg * aranyA;
   B.kbx += nx * erosseg * aranyB;
   B.kby += ny * erosseg * aranyB;
+  effektek.talalat(A.x + nx * rA, A.y + ny * rA, erosseg);
 }
 
 function esesEllenorzes(eltelt) {
@@ -702,6 +706,7 @@ function szurkolokLepes(dt) {
 
 function lepes(dt) {
   jelenlegiIdo += dt;
+  effektek.lepes(dt);
   szurkolokLepes(dt);
   if (allapot === 'KARAKTERVALASZTAS') karakterValasztasLepes(dt);
   else if (allapot === 'VISSZASZAMLALAS') visszaszamlalasLepes(dt);
@@ -934,13 +939,19 @@ function rajzolKorVege() {
 
 function rajzolJatek() {
   const eltelt = KOR_HOSSZ - hatra;
+  c.fillStyle = '#12141c';
+  c.fillRect(0, 0, SZELESSEG, MAGASSAG);
+  c.save();
+  effektek.kamera(c);
   rajzolArena(legutobbiZonaSugar, eltelt);
   rajzolSzurkolok();
   rajzolBoostok();
   rajzolJatekos(jatekosok[0]);
   rajzolJatekos(jatekosok[1]);
+  effektek.rajzol(c);
 
   if (aktivEsemeny && aktivEsemeny.tipus === 'sotetedes') sotetedesRajzolas();
+  c.restore();
 
   rajzolHud(eltelt);
   rajzolEsemenyBanner();

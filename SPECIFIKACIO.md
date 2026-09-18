@@ -151,6 +151,14 @@ korong színe/aurája jelzi, nem külön ikon:
 | Zsugorítva (nagyobb hitbox) | Korong mérete vizuálisan is nő |
 | Esemény-figyelmeztetés | Képernyő szélén rövid villanás + felirat a névvel |
 
+## Ütközések visszajelzése
+
+- Az ütközés helyén 10–32 arany-fehér szikra és egy táguló fénygyűrű jelenik meg; erősebb lökés több szikrát ad.
+- Rövid, lecsengő képernyőrázás: 3–10 px, legfeljebb 0,23 mp. Csak a pálya mozog, a feliratok stabilak; csökkentett mozgás beállításnál nincs rázás.
+- Rövid, szintetizált puffanás, nagyobb lökésnél mélyebb és erősebb hang. A hang billentyűleütéssel vagy a „Hang bekapcsolása” gombbal engedélyezhető, ugyanott némítható; kontrollerhez egérkattintás szükséges lehet.
+- Az effektek között minimum 0,1 mp telik el. A szikrák 0,2–0,45 mp, a fénygyűrű 0,22 mp alatt eltűnik; új körben minden vizuális effekt törlődik.
+- Az effektek nem módosítják az ütközés erejét, az irányítást vagy a kör idejét.
+
 ## MVP a 2 órás határidőhöz
 
 A három kemény feltétel (két kontroller, 1 percen belüli döntés,
